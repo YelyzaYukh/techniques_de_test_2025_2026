@@ -79,7 +79,7 @@ tests/
 **Objectif :** Vérifier la conversion correcte entre structures Python et format binaire.  
 
 **Composants testés :**
-- `PointSetSerializer` : conversion *PointSet ↔ binaire*  
+- `PointSetSerializer` : conversion *binaire ↔ PointSet*  
 - `TrianglesSerializer` : conversion *Triangles ↔ binaire*  
 
 **Cas à couvrir :**
