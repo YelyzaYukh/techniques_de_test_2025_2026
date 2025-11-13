@@ -1,0 +1,8 @@
+#!/home/nas-wks01/users/uapv2307629/techniques_de_tests/techniques_de_test_2025_2026/venv/bin/python3
+# -*- coding: utf-8 -*-
+import re
+import sys
+from pdoc.cli import main
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    sys.exit(main())
