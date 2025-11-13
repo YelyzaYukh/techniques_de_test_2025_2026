@@ -5,6 +5,7 @@ Auteur: Yelyzaveta YUKHNOVA
 Ce module teste les conversions entre structures Python et format binaire
 pour PointSet et Triangles selon la spécification OpenAPI.
 """
+
 import struct
 
 import pytest
