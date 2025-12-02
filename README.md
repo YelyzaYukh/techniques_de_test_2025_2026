@@ -3,7 +3,7 @@
 Forkez le repository pour pouvoir en faire votre version avec votre travail.  
 Le sujet du TP se trouve [ici](./TP/SUJET.md)
 
-## Étudiant
+## Étudiante
 
 Nom : YUKHNOVA  
 Prénom : Yelyzaveta  
