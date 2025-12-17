@@ -8,18 +8,16 @@ pour PointSet et Triangles selon la spécification OpenAPI.
 
 import struct
 import sys
-import math
-import pytest
 
+import pytest
 from triangulator.models.serialize import (
     PointSet,
-    Triangles,
     PointSetSerializer,
+    Triangles,
     TrianglesSerializer,
 )
 
-
-FLOAT32_MAX = 3.4028234663852886e+38
+FLOAT32_MAX = 3.4028234663852886e38
 
 
 # helper for tolerant float comparisons
@@ -34,8 +32,8 @@ def _assert_points_close(list_a, list_b):
 #  BASIC SERIALIZATION TESTS
 # ============================================================================ #
 
-class TestPointSetSerialization:
 
+class TestPointSetSerialization:
     def test_serialize_simple_pointset(self):
         points = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)]
         ps = PointSet(points)
@@ -45,15 +43,15 @@ class TestPointSetSerialization:
         assert struct.unpack("<I", data[:4])[0] == 3
         assert len(data) == 4 + 3 * 8
 
-        x1, y1 = struct.unpack('<ff', data[4:12])
+        x1, y1 = struct.unpack("<ff", data[4:12])
         assert x1 == pytest.approx(0.0)
         assert y1 == pytest.approx(0.0)
 
-        x2, y2 = struct.unpack('<ff', data[12:20])
+        x2, y2 = struct.unpack("<ff", data[12:20])
         assert x2 == pytest.approx(1.0)
         assert y2 == pytest.approx(0.0)
 
-        x3, y3 = struct.unpack('<ff', data[20:28])
+        x3, y3 = struct.unpack("<ff", data[20:28])
         assert x3 == pytest.approx(0.0)
         assert y3 == pytest.approx(1.0)
 
@@ -76,12 +74,15 @@ class TestPointSetSerialization:
         # compare elementwise with tolerance (float32 quantization)
         _assert_points_close(restored.points, original.points)
 
-    @pytest.mark.parametrize("points", [
-        [(0.0, 0.0)],
-        [(0.0, 0.0), (1.0, 1.0)],
-        [(i * 0.1, i * 0.2) for i in range(10)],
-        [(i * 1.0, i * 1.0) for i in range(100)],
-    ])
+    @pytest.mark.parametrize(
+        "points",
+        [
+            [(0.0, 0.0)],
+            [(0.0, 0.0), (1.0, 1.0)],
+            [(i * 0.1, i * 0.2) for i in range(10)],
+            [(i * 1.0, i * 1.0) for i in range(100)],
+        ],
+    )
     def test_various_sizes(self, points):
         ps = PointSet(points)
         data = PointSetSerializer.serialize(ps)
@@ -97,8 +98,8 @@ class TestPointSetSerialization:
 #  EDGE CASES
 # ============================================================================ #
 
-class TestPointSetEdgeCases:
 
+class TestPointSetEdgeCases:
     def test_empty_pointset(self):
         ps = PointSet([])
 
@@ -145,8 +146,8 @@ class TestPointSetEdgeCases:
 #  ERROR CASES
 # ============================================================================ #
 
-class TestPointSetErrorCases:
 
+class TestPointSetErrorCases:
     def test_deserialize_truncated_data(self):
         data = struct.pack("<I", 3)
         data += struct.pack("<ff", 0.0, 0.0)
@@ -175,7 +176,7 @@ class TestPointSetErrorCases:
     def test_extra_bytes(self):
         data = struct.pack("<I", 1)
         data += struct.pack("<ff", 1.0, 2.0)
-        data += b"\xFF\xFF\xFF\xFF"
+        data += b"\xff\xff\xff\xff"
 
         with pytest.raises(ValueError):
             PointSetSerializer.deserialize(data)
@@ -185,8 +186,8 @@ class TestPointSetErrorCases:
 #  TRIANGLES SERIALIZATION TESTS
 # ============================================================================ #
 
-class TestTrianglesSerialization:
 
+class TestTrianglesSerialization:
     def test_serialize_simple_triangles(self):
         vertices = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)]
         triangles = [(0, 1, 2)]
@@ -201,20 +202,20 @@ class TestTrianglesSerialization:
         assert len(data) == 4 + 3 * 8 + 4 + 1 * 12
 
         # check vertex data
-        x1, y1 = struct.unpack('<ff', data[4:12])
+        x1, y1 = struct.unpack("<ff", data[4:12])
         assert x1 == pytest.approx(0.0)
         assert y1 == pytest.approx(0.0)
 
-        x2, y2 = struct.unpack('<ff', data[12:20])
+        x2, y2 = struct.unpack("<ff", data[12:20])
         assert x2 == pytest.approx(1.0)
         assert y2 == pytest.approx(0.0)
 
-        x3, y3 = struct.unpack('<ff', data[20:28])
+        x3, y3 = struct.unpack("<ff", data[20:28])
         assert x3 == pytest.approx(0.0)
         assert y3 == pytest.approx(1.0)
 
         # check triangle data (starts at 32)
-        a, b, c = struct.unpack('<III', data[32:44])
+        a, b, c = struct.unpack("<III", data[32:44])
         assert a == 0
         assert b == 1
         assert c == 2
@@ -246,12 +247,15 @@ class TestTrianglesSerialization:
         # compare triangle indices (exact match)
         assert restored.triangles == original.triangles
 
-    @pytest.mark.parametrize("vertices,triangles", [
-        ([(0.0, 0.0), (1.0, 1.0), (2.0, 0.0)], []),
-        ([(0.0, 0.0), (1.0, 1.0), (2.0, 0.0)], [(0, 1, 2)]),
-        ([(i * 0.1, i * 0.2) for i in range(10)], [(0, 1, 2)]),
-        ([(i * 1.0, i * 1.0) for i in range(100)], [(0, 1, 2), (2, 3, 4)]),
-    ])
+    @pytest.mark.parametrize(
+        "vertices,triangles",
+        [
+            ([(0.0, 0.0), (1.0, 1.0), (2.0, 0.0)], []),
+            ([(0.0, 0.0), (1.0, 1.0), (2.0, 0.0)], [(0, 1, 2)]),
+            ([(i * 0.1, i * 0.2) for i in range(10)], [(0, 1, 2)]),
+            ([(i * 1.0, i * 1.0) for i in range(100)], [(0, 1, 2), (2, 3, 4)]),
+        ],
+    )
     def test_various_sizes_triangles(self, vertices, triangles):
         obj = Triangles(vertices, triangles)
         data = TrianglesSerializer.serialize(obj)
@@ -268,8 +272,8 @@ class TestTrianglesSerialization:
 #  EDGE CASES FOR TRIANGLES
 # ============================================================================ #
 
-class TestTrianglesEdgeCases:
 
+class TestTrianglesEdgeCases:
     def test_empty_triangles(self):
         obj = Triangles([], [])
 
@@ -330,7 +334,7 @@ class TestTrianglesEdgeCases:
         assert len(data) == 4 + 3 * 8 + 4 + 3 * 12
 
         # check triangle data (starts at 32)
-        a, b, c = struct.unpack('<III', data[32:44])
+        a, b, c = struct.unpack("<III", data[32:44])
         assert a == 0
         assert b == 1
         assert c == 2
@@ -340,8 +344,8 @@ class TestTrianglesEdgeCases:
 #  ERROR CASES FOR TRIANGLES
 # ============================================================================ #
 
-class TestTrianglesErrorCases:
 
+class TestTrianglesErrorCases:
     def test_deserialize_truncated_data_triangles(self):
         data = struct.pack("<I", 3)
         data += struct.pack("<ff", 0.0, 0.0)
@@ -377,7 +381,7 @@ class TestTrianglesErrorCases:
         data += struct.pack("<ff", 1.0, 2.0)
         data += struct.pack("<I", 1)
         data += struct.pack("<III", 0, 1, 2)
-        data += b"\xFF\xFF\xFF\xFF"
+        data += b"\xff\xff\xff\xff"
 
         with pytest.raises(ValueError):
             TrianglesSerializer.deserialize(data)

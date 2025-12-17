@@ -1,7 +1,8 @@
-import pytest
 import struct
-from unittest.mock import patch, Mock
+
+import pytest
 from triangulator.models.serialize import PointSet, PointSetSerializer
+
 
 def test_pointset_creation():
     """Test PointSet object creation."""

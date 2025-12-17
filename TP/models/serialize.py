@@ -1,3 +1,12 @@
+"""Binary serialization module for geometric primitives.
+
+This module provides classes and serializers for converting between Python
+geometric objects (PointSet, Triangles) and their binary representations
+according to IEEE-754 single-precision format.
+
+Auteur: Yelyzaveta YUKHNOVA
+"""
+
 import math
 import struct
 
@@ -5,8 +14,36 @@ import struct
 #  CONSTANTS
 # ============================================================================ #
 
-# Maximum finite value representable by IEEE-754 single precision
 FLOAT32_MAX = 3.4028234663852886e38
+"""Maximum finite value representable by IEEE-754 single precision."""
+
+
+# ============================================================================ #
+#  HELPERS
+# ============================================================================ #
+
+
+def _to_f32_clamped(x: float) -> float:
+    """Convert float to float32-representable finite value with clamping.
+
+    Prevents struct.pack overflow by clamping very large values to FLOAT32_MAX.
+    Handles infinities by converting them to signed FLOAT32_MAX.
+
+    Args:
+        x: Input float value
+
+    Returns:
+        float: Value safely convertible to IEEE-754 single precision
+
+    """
+    fx = float(x)
+    if not math.isfinite(fx):
+        return math.copysign(FLOAT32_MAX, fx)
+    if fx > FLOAT32_MAX:
+        return FLOAT32_MAX
+    if fx < -FLOAT32_MAX:
+        return -FLOAT32_MAX
+    return fx
 
 
 # ============================================================================ #
@@ -15,9 +52,26 @@ FLOAT32_MAX = 3.4028234663852886e38
 
 
 class PointSet:
-    """Internal representation of a 2D point set."""
+    """Represents a set of 2D points.
+
+    A PointSet is an immutable collection of (x, y) coordinate pairs.
+    Used as input for triangulation algorithms.
+
+    Attributes:
+        points (List[Tuple[float, float]]): List of (x, y) coordinate tuples
+
+    """
 
     def __init__(self, points: list[tuple[float, float]]):
+        """Initialize a PointSet with validation.
+
+        Args:
+            points: List of tuples, each containing (x, y) float coordinates
+
+        Raises:
+            ValueError: If points is None, not a list, or contains invalid tuples
+
+        """
         if points is None:
             raise ValueError("PointSet points cannot be None")
 
@@ -33,17 +87,59 @@ class PointSet:
         self.points = points
 
     def __eq__(self, other):
+        """Check equality with another PointSet.
+
+        Args:
+            other: Object to compare with
+
+        Returns:
+            bool: True if other is a PointSet with identical points
+
+        """
         if not isinstance(other, PointSet):
             return False
         return self.points == other.points
 
+    def __repr__(self):
+        """Return string representation of PointSet.
+
+        Returns:
+            str: Representation showing number of points
+
+        """
+        return f"PointSet({len(self.points)} points)"
+
 
 class Triangles:
-    """Internal representation of triangles with shared vertices."""
+    """Represents a triangulated mesh with shared vertices.
+
+    A Triangles object stores vertices (shared 2D points) and triangles
+    (references to vertex indices). This enables compact storage of meshes.
+
+    Attributes:
+        vertices (List[Tuple[float, float]]): Shared vertex coordinates
+        triangles (List[Tuple[int, int, int]]): Triangle vertex index tuples
+
+    """
 
     def __init__(
-        self, vertices: list[tuple[float, float]], triangles: list[tuple[int, int, int]]
+        self, vertices: list[tuple[float, float]], triangles: List[Tuple[int, int, int]]
     ):
+        """Initialize a Triangles mesh with validation.
+
+        Validates that:
+        - All vertex indices are within bounds
+        - No triangle repeats the same vertex (degenerate triangles forbidden)
+        - All coordinates are numeric
+
+        Args:
+            vertices: List of (x, y) coordinate tuples for vertices
+            triangles: List of (i, j, k) index tuples referencing vertices
+
+        Raises:
+            ValueError: If validation fails or data is malformed
+
+        """
         if vertices is None or triangles is None:
             raise ValueError("Vertices and triangles cannot be None")
 
@@ -84,28 +180,31 @@ class Triangles:
         self.triangles = triangles
 
     def __eq__(self, other):
+        """Check equality with another Triangles object.
+
+        Args:
+            other: Object to compare with
+
+        Returns:
+            bool: True if vertices and triangles match exactly
+
+        """
         return (
             isinstance(other, Triangles)
             and self.vertices == other.vertices
             and self.triangles == other.triangles
         )
 
+    def __repr__(self):
+        """Return string representation of Triangles.
 
-# ============================================================================ #
-#  HELPERS
-# ============================================================================ #
+        Returns:
+            str: Representation showing vertex and triangle counts
 
-
-def _to_f32_clamped(x: float) -> float:
-    """Convert to float32-representable finite value, clamping if needed."""
-    fx = float(x)
-    if not math.isfinite(fx):
-        return math.copysign(FLOAT32_MAX, fx)
-    if fx > FLOAT32_MAX:
-        return FLOAT32_MAX
-    if fx < -FLOAT32_MAX:
-        return -FLOAT32_MAX
-    return fx
+        """
+        return (
+            f"Triangles({len(self.vertices)} vertices, {len(self.triangles)} triangles)"
+        )
 
 
 # ============================================================================ #
@@ -114,8 +213,29 @@ def _to_f32_clamped(x: float) -> float:
 
 
 class PointSetSerializer:
+    """Serialize/deserialize PointSet objects to/from binary format.
+
+    Binary format (little-endian):
+        <I n>           - uint32: number of points
+        <ff x1 y1>      - float32 x, float32 y for point 1
+        <ff x2 y2>      - float32 x, float32 y for point 2
+        ...
+    """
+
     @staticmethod
     def serialize(pointset: PointSet) -> bytes:
+        """Convert a PointSet to binary representation.
+
+        Args:
+            pointset: PointSet object to serialize
+
+        Returns:
+            bytes: Binary data in little-endian format
+
+        Raises:
+            ValueError: If pointset is not a PointSet instance
+
+        """
         if not isinstance(pointset, PointSet):
             raise ValueError("serialize expects a PointSet object")
 
@@ -130,6 +250,18 @@ class PointSetSerializer:
 
     @staticmethod
     def deserialize(data: bytes) -> PointSet:
+        """Convert binary data to a PointSet object.
+
+        Args:
+            data: Binary bytes in PointSet format
+
+        Returns:
+            PointSet: Reconstructed PointSet object
+
+        Raises:
+            ValueError: If data is malformed or incomplete
+
+        """
         if not data or len(data) < 4:
             raise ValueError("Invalid binary data for PointSet")
 
@@ -157,8 +289,33 @@ class PointSetSerializer:
 
 
 class TrianglesSerializer:
+    """Serialize/deserialize Triangles objects to/from binary format.
+
+    Binary format (little-endian):
+        <I n_vertices>          - uint32: number of vertices
+        <ff x1 y1>              - float32 x, float32 y for vertex 1
+        <ff x2 y2>              - float32 x, float32 y for vertex 2
+        ...
+        <I n_triangles>         - uint32: number of triangles
+        <III i1 j1 k1>          - uint32 i, uint32 j, uint32 k for triangle 1
+        <III i2 j2 k2>          - uint32 i, uint32 j, uint32 k for triangle 2
+        ...
+    """
+
     @staticmethod
     def serialize(triangles_obj: Triangles) -> bytes:
+        """Convert a Triangles mesh to binary representation.
+
+        Args:
+            triangles_obj: Triangles object to serialize
+
+        Returns:
+            bytes: Binary data in little-endian format
+
+        Raises:
+            ValueError: If triangles_obj is not a Triangles instance
+
+        """
         if not isinstance(triangles_obj, Triangles):
             raise ValueError("serialize expects a Triangles object")
 
@@ -166,7 +323,6 @@ class TrianglesSerializer:
         m_triangles = len(triangles_obj.triangles)
 
         out = bytearray()
-        # Layout: <I n_vertices> <vertices...> <I m_triangles> <triangles...>
         out += struct.pack("<I", n_vertices)
 
         for x, y in triangles_obj.vertices:
@@ -182,10 +338,21 @@ class TrianglesSerializer:
 
     @staticmethod
     def deserialize(data: bytes) -> Triangles:
+        """Convert binary data to a Triangles object.
+
+        Args:
+            data: Binary bytes in Triangles format
+
+        Returns:
+            Triangles: Reconstructed Triangles object
+
+        Raises:
+            ValueError: If data is malformed, inconsistent, or incomplete
+
+        """
         if not data or len(data) < 4:
             raise ValueError("Invalid binary data for Triangles")
 
-        # Layout: <I n_vertices> <vertices...> <I m_triangles> <triangles...>
         n_vertices = struct.unpack("<I", data[:4])[0]
         offset = 4
 

@@ -1,32 +1,30 @@
-"""
-Reusable geometric objects for unit and integration tests.
-"""
+"""Reusable geometric objects for unit and integration tests."""
 
 import pytest
-from typing import List
-
-from triangulator.models.point import Point
 from triangulator.models.edge import Edge
-from triangulator.models.triangle import Triangle
-from triangulator.models.carre import Carre
 from triangulator.models.mesh import Mesh
-
+from triangulator.models.point import Point
+from triangulator.models.triangle import Triangle
 
 # ---------------------------------------------------------------------------
 # BASIC POINT FIXTURES
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def p0() -> Point:
     return Point(0.0, 0.0)
+
 
 @pytest.fixture
 def p1() -> Point:
     return Point(1.0, 0.0)
 
+
 @pytest.fixture
 def p2() -> Point:
     return Point(0.0, 1.0)
+
 
 @pytest.fixture
 def p3() -> Point:
@@ -34,13 +32,13 @@ def p3() -> Point:
 
 
 @pytest.fixture
-def collinear_points() -> List[Point]:
+def collinear_points() -> list[Point]:
     """Points lying on the line y = x."""
     return [Point(0.0, 0.0), Point(1.0, 1.0), Point(2.0, 2.0)]
 
 
 @pytest.fixture
-def non_collinear_points() -> List[Point]:
+def non_collinear_points() -> list[Point]:
     return [Point(0.0, 0.0), Point(1.0, 1.0), Point(1.0, 3.0)]
 
 
@@ -48,9 +46,11 @@ def non_collinear_points() -> List[Point]:
 # EDGE FIXTURES
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def edge01(p0: Point, p1: Point) -> Edge:
     return Edge(p0, p1)
+
 
 @pytest.fixture
 def edge12(p1: Point, p2: Point) -> Edge:
@@ -61,6 +61,7 @@ def edge12(p1: Point, p2: Point) -> Edge:
 # TRIANGLE FIXTURES
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def right_triangle(p0: Point, p1: Point, p2: Point) -> Triangle:
     """Reference right triangle."""
@@ -68,7 +69,7 @@ def right_triangle(p0: Point, p1: Point, p2: Point) -> Triangle:
 
 
 @pytest.fixture
-def square_two_triangles(p0: Point, p3: Point) -> List[Triangle]:
+def square_two_triangles(p0: Point, p3: Point) -> list[Triangle]:
     """Return the two triangles that form the unit square."""
     s = Square(p0, p3)
     # ensure a list is returned for easier iteration in tests
@@ -76,7 +77,7 @@ def square_two_triangles(p0: Point, p3: Point) -> List[Triangle]:
 
 
 @pytest.fixture
-def overlapping_triangles() -> List[Triangle]:
+def overlapping_triangles() -> list[Triangle]:
     """Two triangles that share overlapping internal area (invalid mesh)."""
     t1 = Triangle(Point(0.0, 0.0), Point(2.0, 0.0), Point(0.0, 2.0))
     t2 = Triangle(Point(0.5, 0.5), Point(3.0, 0.5), Point(0.5, 3.0))
@@ -87,6 +88,7 @@ def overlapping_triangles() -> List[Triangle]:
 # MESH FIXTURES
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def simple_mesh(right_triangle: Triangle) -> Mesh:
     """A mesh with only one triangle."""
@@ -94,6 +96,6 @@ def simple_mesh(right_triangle: Triangle) -> Mesh:
 
 
 @pytest.fixture
-def square_mesh(square_two_triangles: List[Triangle]) -> Mesh:
+def square_mesh(square_two_triangles: list[Triangle]) -> Mesh:
     """Mesh for a square triangulated into two triangles."""
     return Mesh(square_two_triangles)

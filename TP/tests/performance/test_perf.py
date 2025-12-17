@@ -1,4 +1,5 @@
 import time
+
 from triangulator.models.serialize import PointSet, PointSetSerializer
 
 

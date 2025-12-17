@@ -7,9 +7,8 @@ pour Triangles selon la spécification OpenAPI.
 """
 
 import struct
-import sys
-import pytest
 
+import pytest
 from triangulator.models.serialize import (
     Triangles,
     TrianglesSerializer,
@@ -28,8 +27,8 @@ def _assert_points_close(list_a, list_b):
 #  BASIC SERIALIZATION TESTS
 # ============================================================================ #
 
-class TestTrianglesBasicSerialization:
 
+class TestTrianglesBasicSerialization:
     def test_serialize_single_triangle(self):
         vertices = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)]
         triangles = [(0, 1, 2)]
@@ -70,8 +69,8 @@ class TestTrianglesBasicSerialization:
 #  EDGE CASES
 # ============================================================================ #
 
-class TestTrianglesEdgeCases:
 
+class TestTrianglesEdgeCases:
     def test_empty_triangles_mesh(self):
         obj = Triangles([], [])
 
@@ -128,8 +127,8 @@ class TestTrianglesEdgeCases:
 #  ERROR CASES
 # ============================================================================ #
 
-class TestTrianglesErrorCases:
 
+class TestTrianglesErrorCases:
     def test_deserialize_truncated_data(self):
         data = struct.pack("<I", 3)
         data += struct.pack("<ff", 0.0, 0.0)

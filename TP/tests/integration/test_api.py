@@ -1,9 +1,14 @@
-import struct
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
 import pytest
-from triangulator.models.serialize import PointSetSerializer, TrianglesSerializer, PointSet
+from triangulator.models.serialize import (
+    PointSet,
+    PointSetSerializer,
+    TrianglesSerializer,
+)
 from triangulator.triangulation import app
+
 
 @pytest.fixture(scope="session")
 def server():
@@ -19,7 +24,7 @@ def test_api_triangulate_success(server):
     # Mock fetch_point_set to return binary PointSet
     with patch("triangulator.triangulation.fetch_point_set", return_value=binary_ps):
         response = server.get("/triangulate/test123")
-        
+
         assert response.status_code == 200
         triangles = TrianglesSerializer.deserialize(response.data)
         assert len(triangles.vertices) == 3
@@ -41,7 +46,7 @@ def test_api_triangulate_insufficient_points(server):
     """Test triangulation with fewer than 3 points."""
     pointset = PointSet([(0.0, 0.0), (1.0, 1.0)])
     binary_ps = PointSetSerializer.serialize(pointset)
-    
+
     with patch("triangulator.triangulation.fetch_point_set", return_value=binary_ps):
         response = server.get("/triangulate/test_insufficient")
         assert response.status_code == 400
@@ -53,7 +58,7 @@ def test_api_triangulate_collinear_points(server):
     """Test triangulation with collinear points."""
     pointset = PointSet([(0.0, 0.0), (1.0, 1.0), (2.0, 2.0)])
     binary_ps = PointSetSerializer.serialize(pointset)
-    
+
     with patch("triangulator.triangulation.fetch_point_set", return_value=binary_ps):
         response = server.get("/triangulate/test_collinear")
         # Collinear points can still form a degenerate triangle

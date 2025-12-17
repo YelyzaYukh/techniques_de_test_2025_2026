@@ -1,5 +1,9 @@
-import struct
-from triangulator.models.serialize import PointSet, PointSetSerializer, Triangles, TrianglesSerializer
+from triangulator.models.serialize import (
+    PointSet,
+    PointSetSerializer,
+    Triangles,
+    TrianglesSerializer,
+)
 
 
 def fake_triangulation(ps: PointSet):

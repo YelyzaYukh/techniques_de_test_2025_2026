@@ -1,5 +1,4 @@
-"""
-Dataset generator for testing PointSetManager + Triangulator.
+"""Dataset generator for testing PointSetManager + Triangulator.
 
 Generates:
 - Random PointSets (binary)
@@ -13,16 +12,16 @@ Usage:
     python generate_dataset.py --count 100 --out dataset.jsonl --export-binary
 """
 
-import uuid
 import json
-import struct
 import random
+import struct
+import uuid
 from pathlib import Path
-
 
 ############################
 # Binary encoding helpers  #
 ############################
+
 
 def encode_point_set(points):
     binary = struct.pack(">I", len(points))
@@ -44,6 +43,7 @@ def encode_triangles(points, triangles):
 # Geometry generation      #
 ############################
 
+
 def generate_random_points(n):
     """Generate n random 2D points inside [0,1]²."""
     return [(random.random(), random.random()) for _ in range(n)]
@@ -54,14 +54,15 @@ def triangulate(points):
     if len(points) < 3:
         return []
     tris = []
-    for i in range(1, len(points)-1):
-        tris.append((0, i, i+1))
+    for i in range(1, len(points) - 1):
+        tris.append((0, i, i + 1))
     return tris
 
 
 ############################
 # Dataset generation       #
 ############################
+
 
 def generate_dataset_entry():
     """Generate one dataset entry with ID, PointSet, Triangles."""

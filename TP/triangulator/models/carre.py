@@ -1,6 +1,7 @@
-#Un carré composé de 2 triangles
+# Un carré composé de 2 triangles
 
 from .triangle import Triangle
+
 
 class Carre:
     def __init__(self, p1, p2, p3, p4):

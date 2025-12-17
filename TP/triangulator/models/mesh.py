@@ -1,5 +1,6 @@
 from .edge import Edge
 
+
 class Mesh:
     def __init__(self, points=None):
         self.points = points or []

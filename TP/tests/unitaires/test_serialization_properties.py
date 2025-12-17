@@ -5,16 +5,16 @@ Auteur: Yelyzaveta YUKHNOVA
 """
 
 import random
+
 import pytest
 from triangulator.models.serialize import PointSet, PointSetSerializer
-
 
 # ============================================================================ #
 #  DETERMINISM & FORMAT CONSISTENCY
 # ============================================================================ #
 
-class TestSerializationProperties:
 
+class TestSerializationProperties:
     def test_deterministic(self):
         ps = PointSet([(1.0, 2.0), (3.0, 4.0)])
 
@@ -44,13 +44,12 @@ class TestSerializationProperties:
 #  RANDOMIZED FUZZ TESTING
 # ============================================================================ #
 
-class TestRandomRoundtrip:
 
+class TestRandomRoundtrip:
     def test_random_roundtrip_pointset(self):
         for _ in range(50):
             pts = [
-                (random.uniform(-1e6, 1e6),
-                 random.uniform(-1e6, 1e6))
+                (random.uniform(-1e6, 1e6), random.uniform(-1e6, 1e6))
                 for _ in range(random.randint(0, 50))
             ]
 
