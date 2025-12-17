@@ -8,3 +8,6 @@ select = [
     "SIM",
     "I",
 ]
+
+[tool.coverage.run]
+omit = ["TP/tests/*"]

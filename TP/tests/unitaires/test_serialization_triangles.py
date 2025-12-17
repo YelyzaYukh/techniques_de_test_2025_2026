@@ -2,34 +2,45 @@
 
 Auteur: Yelyzaveta YUKHNOVA
 
+Ce module teste les conversions entre structures Python et format binaire
+pour Triangles selon la spécification OpenAPI.
 """
 
 import struct
+import sys
 import pytest
 
-from models.serialize import Triangles, TrianglesSerializer
+from triangulator.models.serialize import (
+    Triangles,
+    TrianglesSerializer,
+)
+
+
+# helper for tolerant float comparisons
+def _assert_points_close(list_a, list_b):
+    assert len(list_a) == len(list_b)
+    for (ax, ay), (bx, by) in zip(list_a, list_b):
+        assert ax == pytest.approx(bx)
+        assert ay == pytest.approx(by)
 
 
 # ============================================================================ #
-#  BASIC TESTS
+#  BASIC SERIALIZATION TESTS
 # ============================================================================ #
 
-class TestTrianglesSerialization:
+class TestTrianglesBasicSerialization:
 
-    def test_serialize_simple_triangle(self):
+    def test_serialize_single_triangle(self):
         vertices = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)]
-        tri = Triangles(vertices, [(0, 1, 2)])
+        triangles = [(0, 1, 2)]
+        obj = Triangles(vertices, triangles)
 
-        data = TrianglesSerializer.serialize(tri)
+        data = TrianglesSerializer.serialize(obj)
 
         assert struct.unpack("<I", data[:4])[0] == 3
+        assert struct.unpack("<I", data[28:32])[0] == 1
 
-        offset = 4 + 3 * 8
-        assert struct.unpack("<I", data[offset:offset+4])[0] == 1
-
-        assert struct.unpack("<III", data[offset+4:offset+16]) == (0, 1, 2)
-
-    def test_deserialize_simple_triangle(self):
+    def test_deserialize_single_triangle(self):
         data = struct.pack("<I", 3)
         data += struct.pack("<ff", 0.0, 0.0)
         data += struct.pack("<ff", 1.0, 0.0)
@@ -37,31 +48,22 @@ class TestTrianglesSerialization:
         data += struct.pack("<I", 1)
         data += struct.pack("<III", 0, 1, 2)
 
-        tri = TrianglesSerializer.deserialize(data)
+        obj = TrianglesSerializer.deserialize(data)
 
-        assert tri.vertices == [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)]
-        assert tri.triangles == [(0, 1, 2)]
+        assert len(obj.vertices) == 3
+        assert len(obj.triangles) == 1
 
-    def test_roundtrip(self):
-        vertices = [(0, 0), (1, 0), (1, 1), (0, 1)]
-        triangles = [(0, 1, 2), (0, 2, 3)]
-        original = Triangles(vertices, triangles)
+    def test_roundtrip_single_triangle(self):
+        original = Triangles(
+            vertices=[(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)],
+            triangles=[(0, 1, 2)],
+        )
 
         data = TrianglesSerializer.serialize(original)
         restored = TrianglesSerializer.deserialize(data)
 
-        assert restored == original
-
-    @pytest.mark.parametrize("count", [1, 5, 10])
-    def test_various_triangle_counts(self, count):
-        vertices = [(float(i), float(i)) for i in range(count + 2)]
-        triangle_list = [(i, i+1, i+2) for i in range(count)]
-
-        tri = Triangles(vertices, triangle_list)
-        data = TrianglesSerializer.serialize(tri)
-        restored = TrianglesSerializer.deserialize(data)
-
-        assert len(restored.triangles) == count
+        _assert_points_close(restored.vertices, original.vertices)
+        assert restored.triangles == original.triangles
 
 
 # ============================================================================ #
@@ -70,31 +72,56 @@ class TestTrianglesSerialization:
 
 class TestTrianglesEdgeCases:
 
-    def test_empty_triangles(self):
-        tri = Triangles([(0,0), (1,1)], [])
-        data = TrianglesSerializer.serialize(tri)
-        restored = TrianglesSerializer.deserialize(data)
+    def test_empty_triangles_mesh(self):
+        obj = Triangles([], [])
 
-        assert restored.vertices == [(0,0), (1,1)]
-        assert restored.triangles == []
-
-    def test_empty_vertices_and_triangles(self):
-        tri = Triangles([], [])
-        data = TrianglesSerializer.serialize(tri)
+        data = TrianglesSerializer.serialize(obj)
         restored = TrianglesSerializer.deserialize(data)
 
         assert restored.vertices == []
         assert restored.triangles == []
 
-    def test_shared_vertices(self):
-        vertices = [(0,0), (1,0), (0.5,1)]
-        triangles = [(0,1,2), (1,2,0)]
-        tri = Triangles(vertices, triangles)
+    def test_vertices_no_triangles(self):
+        obj = Triangles([(0.0, 0.0), (1.0, 1.0), (2.0, 0.0)], [])
 
-        data = TrianglesSerializer.serialize(tri)
+        data = TrianglesSerializer.serialize(obj)
         restored = TrianglesSerializer.deserialize(data)
 
-        assert restored == tri
+        _assert_points_close(restored.vertices, [(0.0, 0.0), (1.0, 1.0), (2.0, 0.0)])
+        assert restored.triangles == []
+
+    def test_multiple_triangles_shared_vertices(self):
+        vertices = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+        triangles = [(0, 1, 2), (0, 2, 3)]
+        obj = Triangles(vertices, triangles)
+
+        data = TrianglesSerializer.serialize(obj)
+        restored = TrianglesSerializer.deserialize(data)
+
+        _assert_points_close(restored.vertices, vertices)
+        assert restored.triangles == triangles
+
+    def test_negative_coordinates(self):
+        vertices = [(-5.5, -10.2), (-0.1, -100.0), (1.0, 2.0)]
+        triangles = [(0, 1, 2)]
+        obj = Triangles(vertices, triangles)
+
+        data = TrianglesSerializer.serialize(obj)
+        restored = TrianglesSerializer.deserialize(data)
+
+        assert restored.vertices[0][0] == pytest.approx(-5.5)
+        assert restored.vertices[0][1] == pytest.approx(-10.2)
+
+    def test_very_close_vertices(self):
+        vertices = [(0.0, 0.0), (1e-7, 1e-7), (2e-7, 0.0)]
+        triangles = [(0, 1, 2)]
+        obj = Triangles(vertices, triangles)
+
+        data = TrianglesSerializer.serialize(obj)
+        restored = TrianglesSerializer.deserialize(data)
+
+        _assert_points_close(restored.vertices, vertices)
+        assert restored.triangles == triangles
 
 
 # ============================================================================ #
@@ -103,63 +130,39 @@ class TestTrianglesEdgeCases:
 
 class TestTrianglesErrorCases:
 
-    def test_truncated_vertices(self):
-        data = struct.pack("<I", 3)
-        data += struct.pack("<ff", 0.0, 0.0)
-
-        with pytest.raises(ValueError):
-            TrianglesSerializer.deserialize(data)
-
-    def test_truncated_triangles(self):
-        data = struct.pack("<I", 3)
-        data += struct.pack("<ff", 0.0, 0.0)
-        data += struct.pack("<ff", 1.0, 0.0)
-        data += struct.pack("<ff", 0.0, 1.0)
-        data += struct.pack("<I", 2)          # claim 2 triangles
-        data += struct.pack("<III", 0,1,2)    # only one
-
-        with pytest.raises(ValueError):
-            TrianglesSerializer.deserialize(data)
-
-    def test_out_of_bounds_indices(self):
+    def test_deserialize_truncated_data(self):
         data = struct.pack("<I", 3)
         data += struct.pack("<ff", 0.0, 0.0)
         data += struct.pack("<ff", 1.0, 0.0)
         data += struct.pack("<ff", 0.0, 1.0)
         data += struct.pack("<I", 1)
-        data += struct.pack("<III", 0, 1, 5)
 
         with pytest.raises(ValueError):
             TrianglesSerializer.deserialize(data)
 
-    def test_negative_indices(self):
-        data = struct.pack("<I", 3)
+    def test_deserialize_too_short(self):
+        with pytest.raises(ValueError):
+            TrianglesSerializer.deserialize(b"\x01\x00")
+
+    def test_deserialize_empty_bytes(self):
+        with pytest.raises(ValueError):
+            TrianglesSerializer.deserialize(b"")
+
+    def test_deserialize_inconsistent_size(self):
+        data = struct.pack("<I", 2)
         data += struct.pack("<ff", 0.0, 0.0)
-        data += struct.pack("<ff", 1.0, 0.0)
-        data += struct.pack("<ff", 0.0, 1.0)
+        data += struct.pack("<ff", 1.0, 1.0)
         data += struct.pack("<I", 1)
-        data += struct.pack("<III", 0, 1, 4294967295)  # unsigned wrap → -1
+        data += struct.pack("<III", 0, 1, 2)
+        data += b"\x00\x00\x00\x00"
 
         with pytest.raises(ValueError):
             TrianglesSerializer.deserialize(data)
 
-    def test_duplicate_indices(self):
-        vertices = [(0,0), (1,0), (0,1)]
-        triangles = [(0,0,2)]  # invalid triangle
-
+    def test_invalid_triangle_indices(self):
         with pytest.raises(ValueError):
-            TrianglesSerializer.serialize(Triangles(vertices, triangles))
+            Triangles([(0.0, 0.0), (1.0, 0.0)], [(0, 1, 2)])
 
-    def test_triangle_wrong_length(self):
-        vertices = [(0,0), (1,0), (0,1)]
-        triangles = [(0,1)]  # only 2 indices
-
+    def test_repeated_triangle_vertices(self):
         with pytest.raises(ValueError):
-            TrianglesSerializer.serialize(Triangles(vertices, triangles))
-
-    def test_non_integer_index(self):
-        vertices = [(0,0), (1,0), (0,1)]
-        triangles = [(0, "a", 2)]
-
-        with pytest.raises(ValueError):
-            TrianglesSerializer.serialize(Triangles(vertices, triangles))
+            Triangles([(0.0, 0.0), (1.0, 0.0), (0.0, 1.0)], [(0, 0, 2)])

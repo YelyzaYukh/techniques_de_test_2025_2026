@@ -1,5 +1,5 @@
 import time
-from models.serialize import PointSet, PointSetSerializer
+from triangulator.models.serialize import PointSet, PointSetSerializer
 
 
 def test_large_pointset_serialization_performance():

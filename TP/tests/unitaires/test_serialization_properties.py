@@ -6,7 +6,7 @@ Auteur: Yelyzaveta YUKHNOVA
 
 import random
 import pytest
-from models.serialize import PointSet, PointSetSerializer
+from triangulator.models.serialize import PointSet, PointSetSerializer
 
 
 # ============================================================================ #
@@ -58,4 +58,8 @@ class TestRandomRoundtrip:
             data = PointSetSerializer.serialize(ps)
             restored = PointSetSerializer.deserialize(data)
 
-            assert restored == ps
+            # compare elementwise with tolerance because serialization uses float32
+            assert len(restored.points) == len(ps.points)
+            for (rx, ry), (ox, oy) in zip(restored.points, ps.points):
+                assert rx == pytest.approx(ox)
+                assert ry == pytest.approx(oy)

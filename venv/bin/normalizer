@@ -1,0 +1,7 @@
+#!/home/nas-wks01/users/uapv2307629/techniques_de_tests/techniques_de_test_2025_2026/venv/bin/python3
+import sys
+from charset_normalizer.cli import cli_detect
+if __name__ == '__main__':
+    if sys.argv[0].endswith('.exe'):
+        sys.argv[0] = sys.argv[0][:-4]
+    sys.exit(cli_detect())
